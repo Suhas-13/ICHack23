@@ -4,7 +4,20 @@ import asyncio
 import websockets
 import aiohttp
 from datetime import datetime
-from flask import Flask, jsonify, request, Request
+from flask import Flask, jsonify, request, Request, render_template
+import asyncio
+import io
+import glob
+import os
+import sys
+import time
+import uuid
+import requests
+from urllib.parse import urlparse
+from io import BytesIO
+from PIL import Image, ImageDraw
+from deepface import DeepFace
+
 
 app = Flask(__name__)
 app.debug = True
@@ -88,12 +101,50 @@ def generate_payload(token):
 
 # start of web app
 
+def post_processing(database_fr):
+    temp = {'angry': 0, 'disgust': 0, 'fear': 0, 'happy': 0, 'sad': 0, 'surprise': 0, 'neutral': 0}
+    count = 0
+    database_fr2=dict()
+    for i in database_fr:
+      frame=database_fr[i]['image_data']
+      try:
+          face_analysis = DeepFace.analyze(img_path=frame,actions=["emotion","dominant_emotion"])
+      except ValueError : # catches the error when the face cannot be detected
+            continue
+      d_emotion = face_analysis[0]['dominant_emotion']
+      temp[d_emotion] += 1
+      count += 1
+      if count % 5 == 0:  # takes the average of 5 frames
+            dominant_emotion = max(temp, key= lambda x: temp[x])
+            database_fr2[i]=[database_fr[i],dominant_emotion]
+            temp = {'angry': 0, 'disgust': 0, 'fear': 0, 'happy': 0, 'sad': 0, 'surprise': 0, 'neutral': 0}
+    return(database_fr2)
+
+
 @app.route("/create_video", methods=["POST"])
 def create_video():
     request_data = request.get_json()
     video_id = request_data['video_id']
-    videos[video_id] = {"source_url": request_data['source_url'], "title": request_data['title']}
+    videos[video_id] = {"image_url": request_data["image_url"], "source_url": request_data['source_url'], "title": request_data['title']}
     return jsonify({"success": True})
+
+@app.route("/user-dashboard", methods=["POST", "GET"])
+def user_dashboard():
+    username = request.form["username"]
+    password = request.form["password"]
+    if username in accounts:
+        return render_template("/user-dashboard.html", username=username)
+    else:
+        accounts[username] = {"balance": 0}
+
+@app.route("/company-dashboard", methods=["POST", "GET"])
+def user_dashboard():
+    username = request.form["username"]
+    password = request.form["password"]
+    if username in accounts:
+        return render_template("/company-dashboard.html", username=username)
+    else:
+        accounts[username] = {"videos": []}
 
 @app.route("/process_image", methods=["POST"])
 def process_image():
@@ -119,8 +170,10 @@ def finish_session():
     for account in accounts:
         if accounts[account]['active_session'] == request_data['session_id']:
             accounts[account]['active_session'] = None
+            accounts[account]["balance"] += videos[sessions[request_data['session_id']]['video_id']]["price"]
             # iterate through all images. find closest heart rate to each image
             session = sessions[request_data['session_id']]
+
             for image_time in session['images']:
                 closest_hr = None
                 closest_hr_time = None
@@ -129,12 +182,12 @@ def finish_session():
                         closest_hr = session['hr'][hr_time]
                         closest_hr_time = hr_time
                 session['images'][image_time]['hr'] = closest_hr
-                session['images'][image_time]['hr_time'] = closest_hr_time
             del session['hr']
 
-            # do machine learning stuff here
-            
-            return jsonify({"success": True})
+            ml_output = post_processing(sessions[request_data['session_id']]['images'])
+            sessions[request_data['session_id']]['ml_output'] = ml_output
+
+            return jsonify(ml_output)
 
 
 
