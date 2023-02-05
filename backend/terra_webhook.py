@@ -14,6 +14,7 @@ time_list = []
 phone_uid_to_accounts = {}
 sessions = {}
 accounts = {}
+videos = {}
 
 WS_CONNECTION = "wss://ws.tryterra.co/connect"
 
@@ -82,11 +83,14 @@ def generate_payload(token):
         }
     }
 
-@app.route("/api/hr")
-def get_hr_data():
-    return jsonify(hr_list)
+@app.route("/create_video", methods=["POST"])
+def create_video():
+    request_data = request.get_json()
+    video_id = request_data['video_id']
+    videos[video_id] = {"source_url": request_data['source_url'], "title": request_data['title']}
+    return jsonify({"success": True})
 
-@app.route("/process_image")
+@app.route("/process_image", methods=["POST"])
 def process_image():
     request_data = request.get_json()
     image_data = request_data['image_data']
@@ -96,16 +100,24 @@ def process_image():
     if account_id not in accounts:
         accounts[account_id] = {"active_session": None}
     if session_id not in sessions:
-        sessions[session_id] = {}
+        sessions[session_id] = {"images": {}, "hr": {}}
         accounts[account_id]['active_session'] = session_id
     if "images" not in sessions[session_id]:
         sessions[session_id]['images'] = {}
+        sessions[session_id]['video_id'] = request_data["video_id"]
     sessions[session_id]['images'][epoch_time] = {"image_data": image_data, "video_time": request_data["video_time"]}
     return jsonify({"success": True})
 
-@app.route("/")
-def root():
-    return app.send_static_file("index.html")
+@app.route("/finish_session", methods=["POST"])
+def finish_session():
+    request_data = request.get_json()
+    for account in accounts:
+        if accounts[account]['active_session'] == request_data['session_id']:
+            accounts[account]['active_session'] = None
+            sessions[request_data['session_id']]['generated'] = False
+            return jsonify({"success": True})
+
+
 
 if __name__ == "__main__":
     asyncio.run(init_ws())
