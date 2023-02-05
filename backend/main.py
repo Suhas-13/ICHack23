@@ -7,7 +7,11 @@ from datetime import datetime
 from flask import Flask, jsonify, request, Request, render_template, make_response, redirect, url_for
 import asyncio
 import io
+import base64
+import io
 import glob
+import matplotlib.pyplot as plt
+import seaborn as sns
 import random, string
 import os
 import sys
@@ -46,8 +50,10 @@ async def generate_token():
 
 async def init_ws():
     while True:
+        print("ASDASDAS")
         token = await generate_token()
         try:
+            print(token)
             async with websockets.connect(WS_CONNECTION) as socket:
                 expecting_heart_beat_ack = False
 
@@ -64,6 +70,7 @@ async def init_ws():
 
                 async for message in socket:
                     message = json.loads(message)
+                    print(message)
                     if message["op"] == 2:
                         asyncio.create_task(heart_beat_after(message["d"]["heartbeat_interval"] / 1000))
                         payload = json.dumps(generate_payload(token))
@@ -72,18 +79,14 @@ async def init_ws():
                     if message["op"] == 5:
                         if message['d']['val'] <= 0.1:
                             continue
-                        print(message)
                         uid = message["uid"]
-                        if uid not in phone_uid_to_accounts:
-                            continue
-                        else:
-                            for account in accounts:
-                                active_session = accounts[account]['active_session']
-                                if active_session is not None and active_session in sessions:
-                                    if "hr" not in sessions[active_session]:
-                                        sessions[active_session]['hr'] = {}
-                                    epoch_time = int(datetime.strptime(message['d']['ts'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
-                                    sessions[active_session]['hr'][epoch_time] = message['d']['val']
+                        for account in accounts:
+                            active_session = accounts[account]['active_session']
+                            if active_session is not None and active_session in sessions:
+                                if "hr" not in sessions[active_session]:
+                                    sessions[active_session]['hr'] = {}
+                                epoch_time = int(datetime.strptime(message['d']['ts'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
+                                sessions[active_session]['hr'][epoch_time] = message['d']['val']
 
         except Exception as e:
             print(e)
@@ -101,6 +104,70 @@ def generate_payload(token):
 
 # start of web app
 
+def ml_plotter(database_fr2):
+    data=list(database_fr2.values())
+    x=list(database_fr2.keys())
+    x1=x2=x3=x4=x5=x6=x7=[0]*len(data)
+    for i in range(len(data)):
+        if data[i] == 'angry':
+            x1[i]=x1[i]+1
+        elif data[i] =='disgust':
+            x2[i]=x2[i]+1
+        elif data[i] =='fear':
+            x3[i]=x2[i]+1
+        elif data[i] =='happy':
+            x4[i]=x2[i]+1
+        elif data[i] =='sad':
+            x5[i]=x2[i]+1
+        elif data[i] =='surprise':
+            x6[i]=x2[i]+1
+        elif data[i] =='neutral':
+            x7[i]=x2[i]+1
+
+    sns.lineplot(x=x, y=x1,label='angry')
+    sns.lineplot(x=x, y=x2,label='disgust')
+    sns.lineplot(x=x, y=x3,label='fear')
+    sns.lineplot(x=x, y=x4,label='happy')
+    sns.lineplot(x=x, y=x5,label='sad')
+    sns.lineplot(x=x, y=x6,label='surprise')
+    sns.lineplot(x=x, y=x7,label='neutral')
+    plt.xlabel("Time Elapsed (ms)")
+    plt.ylabel("Emotion ")
+    my_stringIObytes = io.BytesIO()
+    plt.savefig(my_stringIObytes, format='jpg')
+    my_stringIObytes.seek(0)
+    my_base64_jpgData = base64.b64encode(my_stringIObytes.read()).decode()
+    return my_base64_jpgData
+
+def plotter( hrs):# image and hrs are of the structure {time: image_data} and (time: hr_data}
+    x=list(hrs.keys())
+    y=list(hrs.values())
+    sns.lineplot(x=x,y=y,color='red')
+    plt.xlabel("Time Elapsed (ms)")
+    plt.ylabel("Heart Beat (bpm)")
+    my_stringIObytes = io.BytesIO()
+    plt.savefig(my_stringIObytes, format='jpg')
+    my_stringIObytes.seek(0)
+    my_base64_jpgData = base64.b64encode(my_stringIObytes.read()).decode()
+    return my_base64_jpgData
+
+def average_to_150(dict):
+    arr= list(dict.values())
+    arr2=[]
+    dict1={}
+    for i in range(1000):
+        sum=0
+        for j in range(0,6):
+            sum=sum+arr[i]
+        sum=sum/6.0
+        arr2.append(sum)
+
+    j=0
+    for i in range(0,len(dict),6):
+        dict1[i]=arr2[j]
+        j=j+1
+    return (dict1)
+
 def post_processing(database_fr):
     temp = {'angry': 0, 'disgust': 0, 'fear': 0, 'happy': 0, 'sad': 0, 'surprise': 0, 'neutral': 0}
     count = 0
@@ -116,13 +183,14 @@ def post_processing(database_fr):
       count += 1
       if count % 5 == 0:  # takes the average of 5 frames
             dominant_emotion = max(temp, key= lambda x: temp[x])
-            database_fr2[i]=[database_fr[i],dominant_emotion]
+            database_fr2[i]=dominant_emotion
             temp = {'angry': 0, 'disgust': 0, 'fear': 0, 'happy': 0, 'sad': 0, 'surprise': 0, 'neutral': 0}
     return(database_fr2)
 
 
-@app.route("/video/<video_id>", methods=["GET"])
-def video(video_id):
+@app.route("/video", methods=["GET"])
+def video():
+    video_id = request.args.get("video_id")
     if video_id in videos:
         return render_template("/show_video.html", video_id = video_id, source_url = videos[video_id]["source_url"], title = videos[video_id]["title"])
     else:
@@ -218,6 +286,8 @@ def process_image():
     account_id = request.cookies.get('username')
     if account_id not in accounts:
         accounts[account_id] = {"active_session": None}
+    else:
+        accounts[account_id]['active_session'] = session_id
     if session_id not in sessions:
         sessions[session_id] = {"images": {}, "hr": {}} # hr is heart rate
         accounts[account_id]['active_session'] = session_id
@@ -225,15 +295,19 @@ def process_image():
         sessions[session_id]['images'] = {}
         sessions[session_id]['video_id'] = request_data["video_id"]
     sessions[session_id]['images'][epoch_time] = {"image_data": image_data}
+    sessions[session_id]["video_id"] = request_data["video_id"]
     return jsonify({"success": True})
 
 @app.route("/finish_session", methods=["POST"])
 def finish_session():
     request_data = request.get_json()
+    print(accounts)
     for account in accounts:
-        if accounts[account]['active_session'] == request_data['session_id']:
+        if accounts[account].get("active_session", None) == request_data['session_id']:
             accounts[account]['active_session'] = None
-            accounts[account]["balance"] += videos[sessions[request_data['session_id']]['video_id']]["price"]
+            if "balance" not in accounts[account]:
+                accounts[account]["balance"] = 0
+            accounts[account]["balance"] += float(videos[sessions[request_data['session_id']]['video_id']]["price"])
             # iterate through all images. find closest heart rate to each image
             session = sessions[request_data['session_id']]
 
@@ -245,16 +319,20 @@ def finish_session():
                         closest_hr = session['hr'][hr_time]
                         closest_hr_time = hr_time
                 session['images'][image_time]['hr'] = closest_hr
-            del session['hr']
-
             ml_output = post_processing(sessions[request_data['session_id']]['images'])
-            sessions[request_data['session_id']]['ml_output'] = ml_output
-
-            return jsonify(ml_output)
-
+            img1 = ml_plotter(ml_output)
+            img2 = plotter(session['hr'])
+            video_id = session['video_id']
+            videos[video_id]["img1"] = img1
+            videos[video_id]["img2"] = img2
+            return jsonify({"success": True})
+    return jsonify({"success": False})
 
 
 if __name__ == "__main__":
-    #asyncio.run(init_ws())
+    
     port = int(os.environ.get("PORT", 3000))
-    app.run(port=port)
+    #asyncio.run(init_ws())
+    app.run(port=port, debug=False)
+    print("ASDASD")
+    

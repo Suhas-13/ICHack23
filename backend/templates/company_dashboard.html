@@ -48,13 +48,21 @@
 							<div class="row gtr-uniform">
 								<section class="col-6 col-6-medium col-12-xsmall">
                   <h3>Emotions</h3>
-									<p>veraged emotion based on facial recognition during film.</p>
+									<p>Averaged emotion based on facial recognition during film.</p>
+                  {% if img1 in videos[video] %}
+                  <img src="{{ videos[video][img1] }}" alt="Smiley face" height="142" width="62">
+                  {else}
 									<span class="icon solid alt major fa-chart-area"></span>
+                  {% endif %}
 								</section>
 								<section class="col-6 col-6-medium col-12-xsmall">
                   <h3>Heart Rate</h3>
 									<p>Averaged heart rate measured by wearable smartwatch.</p>
+                  {% if img2 in videos[video] %}
+                  <img src="{{ videos[video][img2] }}" alt="Smiley face" height="142" width="62">
+                  {else}
 									<span class="icon solid alt major fa-comment"></span>
+                  {% endif %}
 								</section>
 							</div>
 						</div>

@@ -26,7 +26,7 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: false })
 
     let canvas = document.createElement("canvas");
     let context = canvas.getContext("2d");
-    setInterval(function() {
+    var loop = setInterval(function() {
         context.drawImage(video, 0, 0, 640, 480);
         let image_data = canvas.toDataURL("image/png");
         let currentTime = document.getElementsByTagName("video")[0].currentTime
@@ -40,36 +40,49 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: false })
                 image_data: image_data,
                 video_time: currentTime,
                 epoch_time: Date.now() / 1000,
-                video_id: {{video_id|tojson}},
+                video_id: "{{ video_id }}",
                 session_id: session_id
             })
         });
-    }, 1000);
+    }, 250);
+    document.getElementsByTagName("video")[0].addEventListener('ended', () => {
+        clearInterval(loop);
+        let response = fetch("/finish_session", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                session_id: session_id
+            })
+        });
+    });
 });
-</script>
+    </script>
+
 
 <body class="is-preload landing">
     <div id="page-wrapper">
 
         <!-- Header -->
         <header id="header">
-            <h1 id="logo"><a href="{{ url_for('index') }}">Terrable</a></h1>
-            <nav id="nav">
-            </nav>
+            <h1 id="logo"><a href="{{ url_for('user_dashboard') }}">Terrable</a></h1>
         </header>
 
         <!-- Banner -->
         <section id="banner">
             <div class="content">
                 <h3>{{ title }}</h3>
-                <video width="auto" height="40rem" controls>
+                <video class="vid" controls>
                     <source src="{{ source_url }}" type="video/mp4">
                     Your browser does not support the video tag.
                   </video>
+                <p>Heart Rate Monitor Connected <3 </p>
             </div>
-        </section>
-    </div>
 
+        </section>
+
+    </div>
     <!-- Scripts -->
     <script src="static/js/jquery.min.js"></script>
     <script src="static/js/jquery.scrolly.min.js"></script>
