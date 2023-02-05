@@ -1,0 +1,99 @@
+<!DOCTYPE HTML>
+<!--
+	Landed by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+
+<head>
+    <title>Landed by HTML5</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="static/css/main.css" />
+    <noscript><link rel="stylesheet" href="static/css/noscript.css" /></noscript>
+</head>
+
+<script>
+const mediaSource = new MediaSource();
+
+// generate random session id
+let session_id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+  .then(function(stream) {
+    let video = document.createElement("video")
+    video.srcObject = stream;
+    video.play();
+    let canvas = document.createElement("canvas");
+    let context = canvas.getContext("2d");
+    var loop = setInterval(function() {
+        context.drawImage(video, 0, 0,640, 480);
+        let image_data = canvas.toDataURL();
+        let currentTime = document.getElementsByTagName("video")[0].currentTime
+        // make a fetch post request to the server with the image data, currentTime, and video id
+        let response = fetch("/process_image", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                image_data: image_data,
+                video_time: currentTime,
+                epoch_time: Date.now() / 1000,
+                video_id: "{{ video_id }}",
+                session_id: session_id
+            })
+        });
+    }, 250);
+    document.getElementsByTagName("video")[0].addEventListener('ended', () => {
+        clearInterval(loop);
+        let response = fetch("/finish_session", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                session_id: session_id
+            })
+        });
+    });
+});
+    </script>
+
+
+<body class="is-preload landing">
+
+    <div id="page-wrapper">
+
+        <!-- Header -->
+        <header id="header">
+            <h1 id="logo"><a href="{{ url_for('user_dashboard') }}">Terra Test</a></h1>
+        </header>
+
+        <!-- Banner -->
+        <section id="banner">
+            <div class="content">
+                <h3>{{ title }}</h3>
+                <video class="vid" controls>
+                    <source src="{{ source_url }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                  </video>
+                <p>Heart Rate Monitor Connected <3 </p>
+            </div>
+
+        </section>
+
+    </div>
+    <!-- Scripts -->
+    <script src="static/js/jquery.min.js"></script>
+    <script src="static/js/jquery.scrolly.min.js"></script>
+    <script src="static/js/jquery.dropotron.min.js"></script>
+    <script src="static/js/jquery.scrollex.min.js"></script>
+    <script src="static/js/browser.min.js"></script>
+    <script src="static/js/breakpoints.min.js"></script>
+    <script src="static/js/util.js"></script>
+    <script src="static/js/main.js"></script>
+
+</body>
+
+</html>

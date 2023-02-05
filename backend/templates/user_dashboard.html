@@ -1,0 +1,93 @@
+<!DOCTYPE HTML>
+<!--
+	Landed by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+
+<head>
+    <title>Terra Test.com</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="static/css/main.css" />
+    <noscript><link rel="stylesheet" href="static/css/noscript.css" /></noscript>
+</head>
+
+<body class="is-preload landing">
+    <div id="page-wrapper">
+
+        <!-- Header -->
+        <header id="header">
+            <h1 id="logo"><a href="{{ url_for('user_dashboard') }}">Terra Test</a></h1>
+            <!-- <nav id="nav">
+                <ul>
+					<li>
+					<a href="#">Company</a>
+					<ul>
+                        <li><a href="{{ url_for('company_login') }}">Login</a></li>
+                        <li><a href="{{ url_for('company_register') }}">Register</a></li>
+					</ul>
+					</li>
+                    <li><a href="{{ url_for('register') }}" class="button primary">Sign Up</a></li>
+                </ul>
+            </nav> -->
+        </header>
+        <div></div>
+        <section id="three" class="spotlight style3 left">
+ 
+            <div id="carouselExampleControls" class="carousel slide" data-ride="carousel">
+                <div class="carousel-inner">
+                 {% for video in videos %}
+                 {% if loop.first %}
+                  <div class="carousel-item active">
+                    {% else %}
+                    <div class="carousel-item">
+                    {% endif %}
+
+                    <div class="carousel-caption d-none d-md-block btn-car">
+                        <a type="button" class="btn btn-dark" href="{{ url_for('video', video_id = video)}}">Watch</a>
+                      </div>
+                    <img class="d-block w-100" src="{{videos[video]['image_url']}}" alt="First slide" style="height: 50rem;" >
+                  </div>
+                  {% endfor %}
+
+
+                <a class="carousel-control-next" href="#carouselExampleControls" role="button" data-slide="next">
+                  <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                  <span class="sr-only">Next</span>
+                </a>
+              </div>
+
+            <div class="content">
+                <header>
+                    <h2>Welcome {{ username }}</h2>
+                    <p>Current Balance: <a>£{{ accounts[username]['balance'] }}</a></p>
+                </header>
+                <p>Choose a movie you like. Simply complete it with your camera on while wearing a smart watch to earn money.</p>
+                <!-- <ul class="actions">
+                    <li><a href="#" class="button">Learn More</a></li>
+                </ul> -->
+            </div>
+            
+        </section>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="static/js/jquery.min.js"></script>
+    <script src="static/js/jquery.scrolly.min.js"></script>
+    <script src="static/js/jquery.dropotron.min.js"></script>
+    <script src="static/js/jquery.scrollex.min.js"></script>
+    <script src="static/js/browser.min.js"></script>
+    <script src="static/js/breakpoints.min.js"></script>
+    <script src="static/js/util.js"></script>
+    <script src="static/js/main.js"></script>
+
+</body>
+
+</html>
