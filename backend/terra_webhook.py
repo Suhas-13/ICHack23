@@ -114,7 +114,18 @@ def finish_session():
     for account in accounts:
         if accounts[account]['active_session'] == request_data['session_id']:
             accounts[account]['active_session'] = None
-            sessions[request_data['session_id']]['generated'] = False
+            # iterate through all images. find closest heart rate to each image
+            session = sessions[request_data['session_id']]
+            for image_time in session['images']:
+                closest_hr = None
+                closest_hr_time = None
+                for hr_time in session['hr']:
+                    if closest_hr is None or abs(image_time - hr_time) < abs(image_time - closest_hr_time):
+                        closest_hr = session['hr'][hr_time]
+                        closest_hr_time = hr_time
+                session['images'][image_time]['hr'] = closest_hr
+                session['images'][image_time]['hr_time'] = closest_hr_time
+            del session['hr']
             return jsonify({"success": True})
 
 
