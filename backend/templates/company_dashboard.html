@@ -7,7 +7,7 @@
 <html>
 
 <head>
-    <title>Terrable.com</title>
+    <title>Terra Test.com</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
@@ -20,7 +20,7 @@
 
         <!-- Header -->
         <header id="header">
-            <h1 id="logo"><a href="{{ url_for('user_dashboard') }}">Terrable</a></h1>
+            <h1 id="logo"><a href="{{ url_for('user_dashboard') }}">Terra Test</a></h1>
             <nav id="nav">
                 <!-- <ul>
 					<li>
@@ -46,21 +46,21 @@
 						<div class="box alt">
               <h2>{{ videos[video]['title'] }}</h2>
 							<div class="row gtr-uniform">
-								<section class="col-6 col-6-medium col-12-xsmall">
+								<section class="col-12 col-12-medium col-12-xsmall">
                   <h3>Emotions</h3>
 									<p>Averaged emotion based on facial recognition during film.</p>
-                  {% if img1 in videos[video] %}
-                  <img src="{{ videos[video][img1] }}" alt="Smiley face" height="142" width="62">
-                  {else}
+                  {% if 'img1' in videos[video] %}
+                  <img src="data:image/png;base64, {{ videos[video]['img1'] }}"  height="342" width="400">
+                  {% else %}
 									<span class="icon solid alt major fa-chart-area"></span>
                   {% endif %}
 								</section>
-								<section class="col-6 col-6-medium col-12-xsmall">
+								<section class="col-12 col-12-medium col-12-xsmall">
                   <h3>Heart Rate</h3>
 									<p>Averaged heart rate measured by wearable smartwatch.</p>
-                  {% if img2 in videos[video] %}
-                  <img src="{{ videos[video][img2] }}" alt="Smiley face" height="142" width="62">
-                  {else}
+                  {% if 'img2' in videos[video] %}
+                  <img src="data:image/png;base64, {{ videos[video]['img2'] }}" height="342" width="400">
+                  {% else %}
 									<span class="icon solid alt major fa-comment"></span>
                   {% endif %}
 								</section>

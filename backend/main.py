@@ -10,6 +10,7 @@ import io
 import base64
 import io
 import glob
+import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
 import random, string
@@ -33,81 +34,21 @@ sessions = {}
 accounts = {}
 videos = {}
 
-WS_CONNECTION = "wss://ws.tryterra.co/connect"
-
-
-async def generate_token():
-    async with aiohttp.ClientSession() as session:
-        headers = {
-            "Accept": "application/json",
-            "dev-id": "test-screening-dev-hZNKTHrzFJ",
-            "x-api-key": "3cb3a8b7c0321ef5e54a67ae64660eacd5bd1018fee36997921ed63d5109793f"
-        }
-
-        async with session.post("https://ws.tryterra.co/auth/developer", headers=headers) as resp:
-            token = await resp.json()
-            return token["token"]
-
-async def init_ws():
-    while True:
-        print("ASDASDAS")
-        token = await generate_token()
-        try:
-            print(token)
-            async with websockets.connect(WS_CONNECTION) as socket:
-                expecting_heart_beat_ack = False
-
-                async def heart_beat_after(n):
-                    await asyncio.sleep(n)
-                    await heart_beat()
-                async def heart_beat():
-                    print("HEART BEAT")
-                    nonlocal expecting_heart_beat_ack
-                    heart_beat_payload = json.dumps({'op': 0})
-                    asyncio.create_task(socket.send(heart_beat_payload))
-                    expecting_heart_beat_ack = True
-                
-
-                async for message in socket:
-                    message = json.loads(message)
-                    print(message)
-                    if message["op"] == 2:
-                        asyncio.create_task(heart_beat_after(message["d"]["heartbeat_interval"] / 1000))
-                        payload = json.dumps(generate_payload(token))
-                        await socket.send(payload)
-                        print(payload)
-                    if message["op"] == 5:
-                        if message['d']['val'] <= 0.1:
-                            continue
-                        uid = message["uid"]
-                        for account in accounts:
-                            active_session = accounts[account]['active_session']
-                            if active_session is not None and active_session in sessions:
-                                if "hr" not in sessions[active_session]:
-                                    sessions[active_session]['hr'] = {}
-                                epoch_time = int(datetime.strptime(message['d']['ts'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
-                                sessions[active_session]['hr'][epoch_time] = message['d']['val']
-
-        except Exception as e:
-            print(e)
-
-def generate_payload(token):
-    return {
-        "op": 3,
-        "d": {
-            "token": token,
-            "type": 1
-        }
-    }
-
 # end of websockets 
 
 # start of web app
 
 def ml_plotter(database_fr2):
+    plt.clf()
     data=list(database_fr2.values())
     x=list(database_fr2.keys())
-    x1=x2=x3=x4=x5=x6=x7=[0]*len(data)
+    x1=[0]*len(data)
+    x2=[0]*len(data)
+    x3=[0]*len(data)
+    x4=[0]*len(data)
+    x5=[0]*len(data)
+    x6=[0]*len(data)
+    x7=[0]*len(data)
     for i in range(len(data)):
         if data[i] == 'angry':
             x1[i]=x1[i]+1
@@ -135,11 +76,13 @@ def ml_plotter(database_fr2):
     plt.ylabel("Emotion ")
     my_stringIObytes = io.BytesIO()
     plt.savefig(my_stringIObytes, format='jpg')
+    plt.savefig('static/plot2.png', format='jpg')
     my_stringIObytes.seek(0)
     my_base64_jpgData = base64.b64encode(my_stringIObytes.read()).decode()
     return my_base64_jpgData
 
 def plotter( hrs):# image and hrs are of the structure {time: image_data} and (time: hr_data}
+    plt.clf()
     x=list(hrs.keys())
     y=list(hrs.values())
     sns.lineplot(x=x,y=y,color='red')
@@ -147,6 +90,7 @@ def plotter( hrs):# image and hrs are of the structure {time: image_data} and (t
     plt.ylabel("Heart Beat (bpm)")
     my_stringIObytes = io.BytesIO()
     plt.savefig(my_stringIObytes, format='jpg')
+    plt.savefig('static/plot.png', format='jpg')
     my_stringIObytes.seek(0)
     my_base64_jpgData = base64.b64encode(my_stringIObytes.read()).decode()
     return my_base64_jpgData
@@ -183,7 +127,7 @@ def post_processing(database_fr):
       count += 1
       if count % 5 == 0:  # takes the average of 5 frames
             dominant_emotion = max(temp, key= lambda x: temp[x])
-            database_fr2[i]=dominant_emotion
+            database_fr2[i]=dominant_emotion # if this is time it works 
             temp = {'angry': 0, 'disgust': 0, 'fear': 0, 'happy': 0, 'sad': 0, 'surprise': 0, 'neutral': 0}
     return(database_fr2)
 
@@ -301,7 +245,6 @@ def process_image():
 @app.route("/finish_session", methods=["POST"])
 def finish_session():
     request_data = request.get_json()
-    print(accounts)
     for account in accounts:
         if accounts[account].get("active_session", None) == request_data['session_id']:
             accounts[account]['active_session'] = None
@@ -310,29 +253,28 @@ def finish_session():
             accounts[account]["balance"] += float(videos[sessions[request_data['session_id']]['video_id']]["price"])
             # iterate through all images. find closest heart rate to each image
             session = sessions[request_data['session_id']]
-
+            hr_data = json.loads(open("hr_data.json").read())
             for image_time in session['images']:
                 closest_hr = None
                 closest_hr_time = None
-                for hr_time in session['hr']:
+                for hr in hr_data:
+                    hr_time = float(hr)
                     if closest_hr is None or abs(image_time - hr_time) < abs(image_time - closest_hr_time):
-                        closest_hr = session['hr'][hr_time]
+                        closest_hr = float(hr_data[hr])
                         closest_hr_time = hr_time
                 session['images'][image_time]['hr'] = closest_hr
             ml_output = post_processing(sessions[request_data['session_id']]['images'])
             img1 = ml_plotter(ml_output)
-            img2 = plotter(session['hr'])
+            img2 = plotter(hr_data)
             video_id = session['video_id']
             videos[video_id]["img1"] = img1
             videos[video_id]["img2"] = img2
             return jsonify({"success": True})
     return jsonify({"success": False})
 
-
 if __name__ == "__main__":
-    
+    matplotlib.pyplot.switch_backend('Agg') 
     port = int(os.environ.get("PORT", 3000))
-    #asyncio.run(init_ws())
     app.run(port=port, debug=False)
     print("ASDASD")
     

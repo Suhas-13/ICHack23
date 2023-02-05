@@ -24,7 +24,10 @@ from PIL import Image, ImageDraw
 import json
 
 
-sessions = json.loads(open("sessions.json", "r"))
+app = Flask(__name__)
+app.debug = True
+hr_data = {}
+
 WS_CONNECTION = "wss://ws.tryterra.co/connect"
 
 
@@ -42,8 +45,10 @@ async def generate_token():
 
 async def init_ws():
     while True:
+        print("ASDASDAS")
         token = await generate_token()
         try:
+            print(token)
             async with websockets.connect(WS_CONNECTION) as socket:
                 expecting_heart_beat_ack = False
 
@@ -60,6 +65,7 @@ async def init_ws():
 
                 async for message in socket:
                     message = json.loads(message)
+                    print(message)
                     if message["op"] == 2:
                         asyncio.create_task(heart_beat_after(message["d"]["heartbeat_interval"] / 1000))
                         payload = json.dumps(generate_payload(token))
@@ -68,14 +74,9 @@ async def init_ws():
                     if message["op"] == 5:
                         if message['d']['val'] <= 0.1:
                             continue
-                        uid = message["uid"]
-                        for account in accounts:
-                            active_session = accounts[account]['active_session']
-                            if active_session is not None and active_session in sessions:
-                                if "hr" not in sessions[active_session]:
-                                    sessions[active_session]['hr'] = {}
-                                epoch_time = int(datetime.strptime(message['d']['ts'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
-                                sessions[active_session]['hr'][epoch_time] = message['d']['val']
+                        epoch_time = int(datetime.strptime(message['d']['ts'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
+                        hr_data[epoch_time] = message['d']['val']
+                        json.dump(hr_data, open("hr_data.json", "w"))
 
         except Exception as e:
             print(e)
@@ -88,3 +89,5 @@ def generate_payload(token):
             "type": 1
         }
     }
+if __name__ == "__main__":
+    asyncio.run(init_ws())
