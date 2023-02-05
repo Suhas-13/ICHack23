@@ -63,13 +63,13 @@ async def init_ws():
                         if uid not in phone_uid_to_accounts:
                             continue
                         else:
-                            account = phone_uid_to_accounts[uid]
-                            active_session = accounts[account]['active_session']
-                            if active_session is not None and active_session in sessions:
-                                if "hr" not in sessions[active_session]:
-                                    sessions[active_session]['hr'] = {}
-                                epoch_time = int(datetime.strptime(message['d']['ts'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
-                                sessions[active_session]['hr'][epoch_time] = message['d']['val']
+                            for account in accounts:
+                                active_session = accounts[account]['active_session']
+                                if active_session is not None and active_session in sessions:
+                                    if "hr" not in sessions[active_session]:
+                                        sessions[active_session]['hr'] = {}
+                                    epoch_time = int(datetime.strptime(message['d']['ts'], "%Y-%m-%dT%H:%M:%S.%fZ").timestamp())
+                                    sessions[active_session]['hr'][epoch_time] = message['d']['val']
 
         except Exception as e:
             print(e)
@@ -82,6 +82,7 @@ def generate_payload(token):
             "type": 1
         }
     }
+
 
 @app.route("/create_video", methods=["POST"])
 def create_video():
