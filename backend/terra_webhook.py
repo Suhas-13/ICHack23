@@ -18,6 +18,7 @@ videos = {}
 
 WS_CONNECTION = "wss://ws.tryterra.co/connect"
 
+
 async def generate_token():
     async with aiohttp.ClientSession() as session:
         headers = {
@@ -83,6 +84,9 @@ def generate_payload(token):
         }
     }
 
+# end of websockets 
+
+# start of web app
 
 @app.route("/create_video", methods=["POST"])
 def create_video():
@@ -101,7 +105,7 @@ def process_image():
     if account_id not in accounts:
         accounts[account_id] = {"active_session": None}
     if session_id not in sessions:
-        sessions[session_id] = {"images": {}, "hr": {}}
+        sessions[session_id] = {"images": {}, "hr": {}} # hr is heart rate
         accounts[account_id]['active_session'] = session_id
     if "images" not in sessions[session_id]:
         sessions[session_id]['images'] = {}
@@ -127,6 +131,9 @@ def finish_session():
                 session['images'][image_time]['hr'] = closest_hr
                 session['images'][image_time]['hr_time'] = closest_hr_time
             del session['hr']
+
+            # do machine learning stuff here
+            
             return jsonify({"success": True})
 
 
