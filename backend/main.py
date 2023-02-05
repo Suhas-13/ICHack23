@@ -4,10 +4,11 @@ import asyncio
 import websockets
 import aiohttp
 from datetime import datetime
-from flask import Flask, jsonify, request, Request, render_template
+from flask import Flask, jsonify, request, Request, render_template, make_response, redirect, url_for
 import asyncio
 import io
 import glob
+import random, string
 import os
 import sys
 import time
@@ -24,7 +25,6 @@ app.debug = True
 
 hr_list = []
 time_list = []
-phone_uid_to_accounts = {}
 sessions = {}
 accounts = {}
 videos = {}
@@ -128,23 +128,79 @@ def create_video():
     videos[video_id] = {"image_url": request_data["image_url"], "source_url": request_data['source_url'], "title": request_data['title']}
     return jsonify({"success": True})
 
+@app.route('/')
+def index():
+    return render_template("/index.html")
+
+@app.route('/register')
+def register():
+    return render_template("/register.html")
+
+@app.route('/login')
+def login():
+    return render_template("/login.html")
+
+@app.route('/company-login')
+def company_login():
+    return render_template("/company_login.html")
+
+@app.route('/company-register')
+def company_register():
+    return render_template("/company_register.html")
+
 @app.route("/user-dashboard", methods=["POST", "GET"])
 def user_dashboard():
+    if request.cookies.get('username') is not None:
+        username = request.cookies.get('username')
+        if username in accounts:
+            return render_template("/user_dashboard.html", username=username, accounts=accounts, videos=videos)
+        else:
+            accounts[username] = {"balance": 0}
+            return render_template("/user_dashboard.html", username=username, accounts=accounts, videos=videos)
+    if "username" not in request.form:
+        return render_template("/login.html")
     username = request.form["username"]
     password = request.form["password"]
     if username in accounts:
-        return render_template("/user-dashboard.html", username=username)
+        resp = make_response( render_template("/user_dashboard.html", username=username, accounts=accounts, videos=videos))
     else:
         accounts[username] = {"balance": 0}
+        resp = make_response( render_template("/user_dashboard.html", username=username, accounts=accounts, videos=videos))
+    resp.set_cookie('username', username)
+    return resp
+
+@app.route("/add-content")
+def add_content():
+    return render_template("/add_film.html")
+
+@app.route("/video-add", methods=["POST"])
+def video_add():
+    if request.method == "POST":
+        title =request.form['title']
+        image_url = request.form['image_url']
+        price = request.form['price']
+        random_str = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
+        videos[random_str] = {"title": title, "image_url": image_url, "price": price}
+        return redirect(url_for("company_dashboard"))
 
 @app.route("/company-dashboard", methods=["POST", "GET"])
-def user_dashboard():
+def company_dashboard():
+    if request.cookies.get('username') is not None:
+        username = request.cookies.get('username')
+        if username in accounts:
+            return render_template("/company_dashboard.html", username=username, accounts=accounts, videos=videos)
+        else:
+            accounts[username] = {"balance": 0}
+            return render_template("/company_dashboard.html", username=username, accounts=accounts, videos=videos)
     username = request.form["username"]
     password = request.form["password"]
     if username in accounts:
-        return render_template("/company-dashboard.html", username=username)
+        resp = make_response( render_template("/company_dashboard.html", username=username, accounts=accounts, videos=videos))
     else:
         accounts[username] = {"videos": []}
+        resp = make_response( render_template("/company_dashboard.html", username=username, accounts=accounts, videos=videos))
+    resp.set_cookie('username', username)
+    return resp
 
 @app.route("/process_image", methods=["POST"])
 def process_image():
@@ -192,6 +248,6 @@ def finish_session():
 
 
 if __name__ == "__main__":
-    asyncio.run(init_ws())
+    #asyncio.run(init_ws())
     port = int(os.environ.get("PORT", 3000))
     app.run(port=port)
