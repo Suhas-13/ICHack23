@@ -124,9 +124,9 @@ def post_processing(database_fr):
 @app.route("/video/<video_id>", methods=["GET"])
 def video(video_id):
     if video_id in videos:
-        return render_template("/show_video.html", source_url = videos[video_id]["source_url"], title = videos[video_id]["title"])
+        return render_template("/show_video.html", video_id = video_id, source_url = videos[video_id]["source_url"], title = videos[video_id]["title"])
     else:
-        return render_template("/show_video.html", source_url = videos[video_id]["source_url"], title = videos[video_id]["title"])
+        return render_template("/show_video.html", video_id = video_id, source_url = videos[video_id]["source_url"], title = videos[video_id]["title"])
 @app.route("/create_video", methods=["POST"])
 def create_video():
     request_data = request.get_json()
@@ -215,7 +215,7 @@ def process_image():
     image_data = request_data['image_data']
     epoch_time = request_data['epoch_time']
     session_id = request_data['session_id']
-    account_id = request_data['account_id']
+    account_id = request.cookies.get('username')
     if account_id not in accounts:
         accounts[account_id] = {"active_session": None}
     if session_id not in sessions:
@@ -224,7 +224,7 @@ def process_image():
     if "images" not in sessions[session_id]:
         sessions[session_id]['images'] = {}
         sessions[session_id]['video_id'] = request_data["video_id"]
-    sessions[session_id]['images'][epoch_time] = {"image_data": image_data, "video_time": request_data["video_time"]}
+    sessions[session_id]['images'][epoch_time] = {"image_data": image_data}
     return jsonify({"success": True})
 
 @app.route("/finish_session", methods=["POST"])

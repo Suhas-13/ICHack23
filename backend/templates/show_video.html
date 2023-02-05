@@ -14,7 +14,39 @@
     <noscript><link rel="stylesheet" href="static/css/noscript.css" /></noscript>
 </head>
 
+<script>
+const mediaSource = new MediaSource();
 
+// generate random session id
+let session_id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+  .then(function(stream) {
+    let video = document.createElement("video")
+    video.srcObject = stream;
+
+    let canvas = document.createElement("canvas");
+    let context = canvas.getContext("2d");
+    setInterval(function() {
+        context.drawImage(video, 0, 0, 640, 480);
+        let image_data = canvas.toDataURL("image/png");
+        let currentTime = document.getElementsByTagName("video")[0].currentTime
+        // make a fetch post request to the server with the image data, currentTime, and video id
+        let response = fetch("/process_image", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                image_data: image_data,
+                video_time: currentTime,
+                epoch_time: Date.now() / 1000,
+                video_id: {{video_id|tojson}},
+                session_id: session_id
+            })
+        });
+    }, 1000);
+});
+</script>
 
 <body class="is-preload landing">
     <div id="page-wrapper">
