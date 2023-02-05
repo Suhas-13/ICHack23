@@ -47,9 +47,9 @@
                     {% endif %}
 
                     <div class="carousel-caption d-none d-md-block btn-car">
-                        <button type="button" class="btn btn-outline-light">Watch Now</button>
+                        <a type="button" class="btn btn-dark" href="{{ url_for('video', video_id = video)}}">Watch</a>
                       </div>
-                    <img class="d-block w-100" src="{{videos[video]['image_url']}}" alt="First slide">
+                    <img class="d-block w-100" src="{{videos[video]['image_url']}}" alt="First slide" style="height: 50rem;" >
                   </div>
                   {% endfor %}
 

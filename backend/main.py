@@ -121,6 +121,12 @@ def post_processing(database_fr):
     return(database_fr2)
 
 
+@app.route("/video/<video_id>", methods=["GET"])
+def video(video_id):
+    if video_id in videos:
+        return render_template("/show_video.html", source_url = videos[video_id]["source_url"], title = videos[video_id]["title"])
+    else:
+        return render_template("/show_video.html", source_url = videos[video_id]["source_url"], title = videos[video_id]["title"])
 @app.route("/create_video", methods=["POST"])
 def create_video():
     request_data = request.get_json()
@@ -180,7 +186,8 @@ def video_add():
         image_url = request.form['image_url']
         price = request.form['price']
         random_str = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(16))
-        videos[random_str] = {"title": title, "image_url": image_url, "price": price}
+        videos[random_str] = {"title": title, "image_url": image_url, "price": price, "source_url": request.form['source_url']}
+        
         return redirect(url_for("company_dashboard"))
 
 @app.route("/company-dashboard", methods=["POST", "GET"])
